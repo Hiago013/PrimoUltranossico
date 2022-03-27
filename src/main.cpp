@@ -8,7 +8,7 @@ Ultrasonic SensorUltrassonico1(9, 10);
 
 long Microsegundos = 0;// Variável para armazenar o valor do tempo da reflexão do som refletido pelo objeto fornecido pela biblioteca do sensor
 float DistanciaemCM = 0;// Variável para armazenar o valor da distância a ser convertido por uma função da própria bilbioteca do sensor
-
+long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distância a ser convertido por uma função de filtragem (Media Móvel)
 
 #define MotorLadoEsquerdo1 7
 #define MotorLadoEsquerdo2  8
@@ -20,11 +20,14 @@ float DistanciaemCM = 0;// Variável para armazenar o valor da distância a ser 
 #define VelocidadeMotorLadoEsquerdo 6 // PWM
 #define VelocidadeMotorLadoDireito 3  // PWM
 
+#define N 10 // Constante Auxiliar
+
+unsigned values[N]; // Vetor para armazenar os valores do sensor
 
 
 //============================================================ Escolhe a velocidade dos motores ==================================================================//
-int ValorVelocidadeMotorLadoEsquerdo = 120; // Ajudar a velocidade do motor do lado esquerdo
-int ValorVelocidadeMotorLadoDireito = 80; // Ajudar a velocidade do motor do lado direito
+int ValorVelocidadeMotorLadoEsquerdo = 120; // Ajustar a velocidade do motor do lado esquerdo
+int ValorVelocidadeMotorLadoDireito = 80; // Ajustar a velocidade do motor do lado direito
 
 // ============================================= Funções do Motor =================================================================================================//
 
@@ -87,6 +90,10 @@ void Forward(){ // O Cubeto anda para frente
 
 }
 
+// media movel de 10 periodos
+long moving_average(unsigned p_In);
+
+
 void setup() {
 
   //============================================================== Definições de entrada e saída ===================================================================//
@@ -107,12 +114,13 @@ void loop() {
 
   //Convertendo a distância em CM e lendo o sensor
   DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
+  DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
 
   Serial.print(DistanciaemCM);
   Serial.println(" cm");
 
 
-  if (DistanciaemCM <= 40) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
+  if (DistanciaemCM_Filtrado <= 20) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
     //Velocidade motor lado esquerdo
     analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
 
@@ -144,6 +152,20 @@ void loop() {
 
 }
 
+// ============================================= Funções de filtragem =================================================================================================//
+long moving_average(unsigned p_In) // Media movel de 10 periodos
+{
+  int i;
+  long adder = 0;
 
+  for(i = N; i>0; i--)
+    values[i] = values[i-1];
+  values[0] = p_In;
+
+  for(i = 0; i<N; i++)
+    adder += values[i];
+  
+  return adder/N;
+}
 
 
