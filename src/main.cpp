@@ -17,19 +17,88 @@ long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distânci
 #define MotorLadoDireito2 5
 
 
-#define VelocidadeMotorLadoEsquerdo 6 // PWM
+#define VelocidadeMotorLadoEsquerdo 11 // PWM
 #define VelocidadeMotorLadoDireito 3  // PWM
 
 #define N 10 // Constante Auxiliar
 
-unsigned values[N]; // Vetor para armazenar os valores do sensor
+long values[N]; // Vetor para armazenar os valores do sensor
 
 
 //============================================================ Escolhe a velocidade dos motores ==================================================================//
-int ValorVelocidadeMotorLadoEsquerdo = 120; // Ajustar a velocidade do motor do lado esquerdo
-int ValorVelocidadeMotorLadoDireito = 80; // Ajustar a velocidade do motor do lado direito
+int ValorVelocidadeMotorLadoEsquerdo = 155; // Ajustar a velocidade do motor do lado esquerdo
+int ValorVelocidadeMotorLadoDireito = 150; // Ajustar a velocidade do motor do lado direito
 
-// ============================================= Funções do Motor =================================================================================================//
+// ============================================= Prototipo de funções do motor =================================================================================================//
+
+
+void BreakMotor(); // Para o motor
+
+void TurnLeft();  // Gira para a esquerda
+
+void TurnRight(); // Gira para a direita
+
+void TurnBack(); // Gira para trás
+
+void Forward(); // Anda para frente
+
+void NewWay(); // Nova rota
+
+long moving_average(long p_In); // Media movel
+
+
+void setup() {
+
+  //============================================================== Definições de entrada e saída ===================================================================//
+
+  pinMode(MotorLadoEsquerdo1, OUTPUT);
+  pinMode(MotorLadoEsquerdo2, OUTPUT);
+  pinMode(MotorLadoDireito1, OUTPUT);
+  pinMode(MotorLadoDireito2, OUTPUT);
+
+  Serial.begin(9600);// Inicia a comunicação seria com velocidade de 9600 bits por segundo
+
+  delay(3000);// Tempo de espera para inicialização (para dar tempo de por o robô no chão)
+}
+
+void loop() {
+  delay(20); // Tempo de espera para a leitura do sensor
+
+  //Convertendo a distância em CM e lendo o sensor
+  DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
+  DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
+
+  //Serial.print(DistanciaemCM);
+  //Serial.println(" cm");
+
+
+  if (DistanciaemCM_Filtrado <= 20) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
+    //Velocidade motor lado esquerdo
+    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
+
+    //Velocidade motor lado direito
+    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
+
+    NewWay();
+
+  }
+
+
+  else {// Se não, ou seja, se a distância for maior que 40 centimetros
+
+    //Velocidade motor lado esquerdo
+    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
+
+    //Velocidade motor lado direito
+    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
+
+    Forward();
+  }
+
+}
+
+// ============================================= Funções  =================================================================================================//
+
 
 void BreakMotor(){ // Essa função faz o motor parar de girar
     // Motor lado esquerdo desligado
@@ -90,82 +159,51 @@ void Forward(){ // O Cubeto anda para frente
 
 }
 
-// media movel de 10 periodos
-long moving_average(unsigned p_In);
-
-
-void setup() {
-
-  //============================================================== Definições de entrada e saída ===================================================================//
-
-  pinMode(MotorLadoEsquerdo1, OUTPUT);
-  pinMode(MotorLadoEsquerdo2, OUTPUT);
-  pinMode(MotorLadoDireito1, OUTPUT);
-  pinMode(MotorLadoDireito2, OUTPUT);
-
-  Serial.begin(115200);// Inicia a comunicação seria com velocidade de 115200 bits por segundo
-
-  delay(3000);// Tempo de espera para inicialização (para dar tempo de por o robô no chão)
-}
-
-void loop() {
-
-
-
-  //Convertendo a distância em CM e lendo o sensor
+void NewWay(){ // Determinar uma nova rota
   DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
   DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-
-  Serial.print(DistanciaemCM);
-  Serial.println(" cm");
-
-
-  if (DistanciaemCM_Filtrado <= 20) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
-    //Velocidade motor lado esquerdo
-    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
-
-    //Velocidade motor lado direito
-    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
-
+  while (DistanciaemCM_Filtrado < 20)
+  {
     BreakMotor();
-    delay(500);     // Tempo que ficará parado
+    delay(500);
     TurnBack();
-    delay(700);     // Tempo que ficará indo para trás
+    delay(700);
     BreakMotor();
-    delay(500);     // Tempo que ficará parado
+    delay(500);  
     TurnRight();
-    delay(200);     // Tempo que ficará indo para o lado direito
+    delay(200);
+    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
+    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
+    if (DistanciaemCM_Filtrado < 20){
+      BreakMotor();
+      delay(500);
+      TurnLeft();
+      delay(400);
+    } 
+    else
+    {
+      break;
+    }
+    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
+    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
 
-  }
-
-
-  else {// Se não, ou seja, se a distância for maior que 40 centimetros
-
-    //Velocidade motor lado esquerdo
-    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
-
-    //Velocidade motor lado direito
-    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
-
-    Forward();
   }
 
 }
 
-// ============================================= Funções de filtragem =================================================================================================//
-long moving_average(unsigned p_In) // Media movel de 10 periodos
+long moving_average(long p_In) // Media movel de 10 periodos
 {
   int i;
-  long adder = 0;
-
-  for(i = N; i>0; i--)
-    values[i] = values[i-1];
-  values[0] = p_In;
-
-  for(i = 0; i<N; i++)
-    adder += values[i];
+  long adder = 0; // acumulador para somar os pontos da media movel
+  // desloca os elementos do vetor media movel 
+  for(i = N; i>0; i--) values[i] = values[i-1];
   
-  return adder/N;
+  values[0] = p_In; // posicao inicial do vetor recebe a leitra p_In
+
+  for(i = 0; i<N; i++) adder += values[i]; // soma os elementos do vetor
+  
+  return adder/N; // retorna a media
 }
+
 
 
