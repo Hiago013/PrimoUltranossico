@@ -19,15 +19,18 @@ long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distânci
 
 #define VelocidadeMotorLadoEsquerdo 11 // PWM
 #define VelocidadeMotorLadoDireito 3  // PWM
+#define STBY 2 // 
 
 #define N 10 // Constante Auxiliar
+
+#define distancia 20 // distancia para parar
 
 long values[N]; // Vetor para armazenar os valores do sensor
 
 
 //============================================================ Escolhe a velocidade dos motores ==================================================================//
-int ValorVelocidadeMotorLadoEsquerdo = 155; // Ajustar a velocidade do motor do lado esquerdo
-int ValorVelocidadeMotorLadoDireito = 150; // Ajustar a velocidade do motor do lado direito
+int ValorVelocidadeMotorLadoEsquerdo = 55; // Ajustar a velocidade do motor do lado esquerdo
+int ValorVelocidadeMotorLadoDireito = 53; // Ajustar a velocidade do motor do lado direito
 
 // ============================================= Prototipo de funções do motor =================================================================================================//
 
@@ -69,10 +72,12 @@ void loop() {
   DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
 
   //Serial.print(DistanciaemCM);
-  //Serial.println(" cm");
+  //Serial.println(" ");
+  Serial.print(DistanciaemCM_Filtrado);
+  Serial.println(" ");
 
 
-  if (DistanciaemCM_Filtrado <= 20) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
+  if (DistanciaemCM_Filtrado <= distancia) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
     //Velocidade motor lado esquerdo
     analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
 
@@ -101,6 +106,9 @@ void loop() {
 
 
 void BreakMotor(){ // Essa função faz o motor parar de girar
+
+    //
+    digitalWrite(STBY, LOW);
     // Motor lado esquerdo desligado
     digitalWrite(MotorLadoEsquerdo1, LOW);
     digitalWrite(MotorLadoEsquerdo2, LOW);
@@ -112,6 +120,8 @@ void BreakMotor(){ // Essa função faz o motor parar de girar
 
 
 void TurnRight(){ // O cubeto gira à direita
+
+    digitalWrite(STBY, HIGH);
 
     // Motor lado esquerdo para frente
     digitalWrite(MotorLadoEsquerdo1, LOW);
@@ -125,6 +135,8 @@ void TurnRight(){ // O cubeto gira à direita
 }
 
 void TurnLeft(){ // O Cubeto gira à esquerda
+
+  digitalWrite(STBY, HIGH);
   // Motor lado direito para frente
   digitalWrite(MotorLadoDireito1, LOW);
   digitalWrite(MotorLadoDireito2, HIGH);
@@ -137,6 +149,8 @@ void TurnLeft(){ // O Cubeto gira à esquerda
 
 void TurnBack(){ // O Cubeto anda para trás
 
+  digitalWrite(STBY, HIGH);
+
   // Motor lado direito para trás
     digitalWrite(MotorLadoDireito1, HIGH);
     digitalWrite(MotorLadoDireito2, LOW);
@@ -148,6 +162,8 @@ void TurnBack(){ // O Cubeto anda para trás
 }
 
 void Forward(){ // O Cubeto anda para frente
+
+  digitalWrite(STBY, HIGH);
 
   // Motor lado direito para frente
     digitalWrite(MotorLadoDireito1, LOW);
@@ -162,19 +178,19 @@ void Forward(){ // O Cubeto anda para frente
 void NewWay(){ // Determinar uma nova rota
   DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
   DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-  while (DistanciaemCM_Filtrado < 20)
+  while (DistanciaemCM_Filtrado < distancia)
   {
     BreakMotor();
     delay(500);
-    TurnBack();
-    delay(700);
-    BreakMotor();
-    delay(500);  
+    //TurnBack();
+    //delay(700);
+    //BreakMotor();
+    //delay(500);  
     TurnRight();
-    delay(200);
+    delay(400);
     DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
     DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-    if (DistanciaemCM_Filtrado < 20){
+    if (DistanciaemCM_Filtrado < distancia){
       BreakMotor();
       delay(500);
       TurnLeft();
@@ -204,6 +220,3 @@ long moving_average(long p_In) // Media movel de 10 periodos
   
   return adder/N; // retorna a media
 }
-
-
-
