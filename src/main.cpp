@@ -11,10 +11,10 @@ float DistanciaemCM = 0;// Variável para armazenar o valor da distância a ser 
 long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distância a ser convertido por uma função de filtragem (Media Móvel)
 
 #define MotorLadoEsquerdo1 7
-#define MotorLadoEsquerdo2  8
+#define MotorLadoEsquerdo2 8
 
-#define MotorLadoDireito1  4
-#define MotorLadoDireito2 5
+#define MotorLadoDireito1 A4
+#define MotorLadoDireito2 A5
 
 
 #define VelocidadeMotorLadoEsquerdo 11 // PWM
@@ -24,6 +24,10 @@ long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distânci
 #define N 10 // Constante Auxiliar
 
 #define distancia 20 // distancia para parar
+
+#define vermelho 13
+#define verde 12
+#define azul A1
 
 long values[N]; // Vetor para armazenar os valores do sensor
 
@@ -47,6 +51,12 @@ void Forward(); // Anda para frente
 
 void NewWay(); // Nova rota
 
+void Yellow(); // Led Acende na cor amarelo
+
+void Green(); // Led Acende na cor verde
+
+void Red(); // Led acende na cor vermelho
+
 long moving_average(long p_In); // Media movel
 
 
@@ -58,6 +68,9 @@ void setup() {
   pinMode(MotorLadoEsquerdo2, OUTPUT);
   pinMode(MotorLadoDireito1, OUTPUT);
   pinMode(MotorLadoDireito2, OUTPUT);
+  pinMode(vermelho, OUTPUT);
+  pinMode(verde, OUTPUT);
+  pinMode(azul, OUTPUT);
 
   Serial.begin(9600);// Inicia a comunicação seria com velocidade de 9600 bits por segundo
 
@@ -84,6 +97,7 @@ void loop() {
     //Velocidade motor lado direito
     analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
 
+    Red();
     NewWay();
 
   }
@@ -98,6 +112,8 @@ void loop() {
     analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
 
     Forward();
+    if(DistanciaemCM_Filtrado > 40) Green();
+    else Yellow();
   }
 
 }
@@ -182,10 +198,10 @@ void NewWay(){ // Determinar uma nova rota
   {
     BreakMotor();
     delay(500);
-    //TurnBack();
-    //delay(700);
-    //BreakMotor();
-    //delay(500);  
+    TurnBack();
+    delay(700);
+    BreakMotor();
+    delay(500);  
     TurnRight();
     delay(400);
     DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
@@ -219,4 +235,26 @@ long moving_average(long p_In) // Media movel de 10 periodos
   for(i = 0; i<N; i++) adder += values[i]; // soma os elementos do vetor
   
   return adder/N; // retorna a media
+}
+
+
+void Yellow()
+{
+digitalWrite(vermelho, LOW);
+digitalWrite(verde, HIGH);
+digitalWrite(azul, HIGH);
+}
+
+void Green()
+{
+digitalWrite(vermelho, LOW);
+digitalWrite(verde, HIGH);
+digitalWrite(azul, LOW);
+}
+
+void Red()
+{
+digitalWrite(vermelho, HIGH);
+digitalWrite(verde, LOW);
+digitalWrite(azul, LOW);
 }
