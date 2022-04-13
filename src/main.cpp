@@ -2,32 +2,32 @@
 #include "Ultrasonic.h"
 
 //Criando objeto ultrasonic e definindo as portas digitais
-//do Trigger - 9 - e Echo - 10
-Ultrasonic SensorUltrassonico1(9, 10);
+//do Trigger - 3 - e Echo - 10
+Ultrasonic SensorUltrassonico1(3, 10);
 
 
 long Microsegundos = 0;// Variável para armazenar o valor do tempo da reflexão do som refletido pelo objeto fornecido pela biblioteca do sensor
 float DistanciaemCM = 0;// Variável para armazenar o valor da distância a ser convertido por uma função da própria bilbioteca do sensor
 long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distância a ser convertido por uma função de filtragem (Media Móvel)
 
-#define MotorLadoEsquerdo1 7
-#define MotorLadoEsquerdo2 8
+#define MotorLadoEsquerdo1 4 // AIN 1
+#define MotorLadoEsquerdo2 5 // AIN 2
 
-#define MotorLadoDireito1 A4
-#define MotorLadoDireito2 A5
+#define MotorLadoDireito1 7 // BIN 1
+#define MotorLadoDireito2 8 // BIN 2
 
 
-#define VelocidadeMotorLadoEsquerdo 11 // PWM
-#define VelocidadeMotorLadoDireito 3  // PWM
+#define VelocidadeMotorLadoEsquerdo 6 // PWMA
+#define VelocidadeMotorLadoDireito 9  // PWMB
 #define STBY 2 // 
 
 #define N 10 // Constante Auxiliar
 
 #define distancia 20 // distancia para parar
 
+#define verde 11
+#define azul 12
 #define vermelho 13
-#define verde 12
-#define azul A1
 
 long values[N]; // Vetor para armazenar os valores do sensor
 
