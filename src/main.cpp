@@ -34,7 +34,7 @@ long values[N]; // Vetor para armazenar os valores do sensor
 
 //============================================================ Escolhe a velocidade dos motores ==================================================================//
 int ValorVelocidadeMotorLadoEsquerdo = 55; // Ajustar a velocidade do motor do lado esquerdo
-int ValorVelocidadeMotorLadoDireito = 53; // Ajustar a velocidade do motor do lado direito
+int ValorVelocidadeMotorLadoDireito = 52; // Ajustar a velocidade do motor do lado direito
 
 // ============================================= Prototipo de funções do motor =================================================================================================//
 
@@ -113,7 +113,7 @@ void loop() {
 
     Forward();
     if(DistanciaemCM_Filtrado > 40) Green();
-    else Yellow();
+    else Blue();
   }
 
 }
@@ -198,27 +198,35 @@ void NewWay(){ // Determinar uma nova rota
   {
     BreakMotor();
     delay(500);
-    TurnBack();
-    delay(700);
-    BreakMotor();
-    delay(500);  
+    //TurnBack();
+    //delay(700);
+    //BreakMotor();
+    //delay(500);  
     TurnRight();
     delay(400);
+    BreakMotor();
+    delay(500);
     DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
     DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
     if (DistanciaemCM_Filtrado < distancia){
+      TurnLeft();
+      delay(800);
       BreakMotor();
       delay(500);
-      TurnLeft();
-      delay(400);
     } 
-    else
-    {
-      break;
-    }
+    else break;
     DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
     DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
 
+    if (DistanciaemCM_Filtrado < distancia) {
+      TurnLeft();
+      delay(300);
+      BreakMotor();
+      delay(500);
+      }
+    else break;
+    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
+    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
   }
 
 }
@@ -238,10 +246,10 @@ long moving_average(long p_In) // Media movel de 10 periodos
 }
 
 
-void Yellow()
+void Blue()
 {
 digitalWrite(vermelho, LOW);
-digitalWrite(verde, HIGH);
+digitalWrite(verde, LOW);
 digitalWrite(azul, HIGH);
 }
 
