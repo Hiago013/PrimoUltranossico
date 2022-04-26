@@ -1,268 +1,344 @@
-//Incluindo biblioteca Ultrasonic.h
-#include "Ultrasonic.h"
+#include <Arduino.h>
+#include "UltraSonic.h"
+#include "MPU6050_light.h"
 
-//Criando objeto ultrasonic e definindo as portas digitais
-//do Trigger - 3 - e Echo - 10
-Ultrasonic SensorUltrassonico1(3, 10);
+struct PonteH
+{
+int pin_motor_left_1; 
+int pin_motor_left_2; 
+
+int pin_motor_right_1; 
+int pin_motor_right_2; 
+
+int STBY;
+
+int pin_speed_motor_left;
+int pin_speed_motor_right;
+};
+
+class PID{
+  private:
+  float kp, ki, kd;
+  float error, integral, derivative, last_error, setPoint;
+  float output;
+  public:
+  PID(float _kp, float _ki, float _kd);
+  float calculate(float input,float _setPoint);
+};
+
+PID::PID(float _kp, float _ki, float _kd){
+  kp = _kp;
+  ki = _ki;
+  kd = _kd;
+  error = 0;
+  integral = 0;
+  derivative = 0;
+  last_error = 0;
+  output = 0;
+}
+
+float PID::calculate(float input, float _setPoint){
+  setPoint = _setPoint;
+  error = setPoint - input;
+  integral += error;
+  derivative = error - last_error;
+  last_error = error;
+  output = kp * error + ki * integral + kd * derivative;
+  return output;
+}
+
+class ControlMotor{
+  private:
+  int pin_motor_left_1, pin_motor_right_1, pin_motor_left_2, pin_motor_right_2;
+  int pin_motor_left_pwm, pin_motor_right_pwm;
+  int pin_STBY;
+
+  public:
+  ControlMotor(PonteH _pins); //constructor
+  void setPWM(int _pwm_left, int _pwm_right);
+  void goForward();
+  void TurnLeft();
+  void TurnRight();
+  void Off();
+
+};
+
+ControlMotor::ControlMotor(PonteH _pins){
+  pin_motor_left_1 = _pins.pin_motor_left_1;
+  pin_motor_right_1 = _pins.pin_motor_right_1;
+  pin_motor_left_2 = _pins.pin_motor_left_2;
+  pin_motor_right_2 = _pins.pin_motor_right_2;
+  pin_motor_left_pwm = _pins.pin_speed_motor_left;
+  pin_motor_right_pwm = _pins.pin_speed_motor_right;
+  pin_STBY = _pins.STBY;
+  pinMode(pin_motor_left_1, OUTPUT);
+  pinMode(pin_motor_left_2, OUTPUT);
+  pinMode(pin_motor_right_1, OUTPUT);
+  pinMode(pin_motor_right_2, OUTPUT);
+  pinMode(_pins.STBY, OUTPUT);
+  pinMode(pin_motor_left_pwm, OUTPUT);
+  pinMode(pin_motor_right_pwm, OUTPUT);
+}
+
+void ControlMotor::setPWM(int _pwm_left, int _pwm_right){
+  analogWrite(pin_motor_left_pwm, _pwm_left);
+  analogWrite(pin_motor_right_pwm, _pwm_right);
+}
+
+void ControlMotor::goForward(){
+  digitalWrite(pin_STBY, HIGH);
+  digitalWrite(pin_motor_right_1, LOW);
+  digitalWrite(pin_motor_right_2, HIGH);
+  digitalWrite(pin_motor_left_1, LOW);
+  digitalWrite(pin_motor_left_2, HIGH);
+}
+
+void ControlMotor::TurnLeft(){
+  digitalWrite(pin_STBY, HIGH);
+  digitalWrite(pin_motor_right_1, LOW);
+  digitalWrite(pin_motor_right_2, HIGH);
+  digitalWrite(pin_motor_left_1, HIGH);
+  digitalWrite(pin_motor_left_2, LOW);
+}
+
+void ControlMotor::TurnRight(){
+  digitalWrite(pin_STBY, HIGH);
+  digitalWrite(pin_motor_right_1, HIGH);
+  digitalWrite(pin_motor_right_2, LOW);
+  digitalWrite(pin_motor_left_1, LOW);
+  digitalWrite(pin_motor_left_2, HIGH);
+}
+
+void ControlMotor::Off(){
+  digitalWrite(pin_STBY, LOW);
+  digitalWrite(pin_motor_right_1, LOW);
+  digitalWrite(pin_motor_right_2, LOW);
+  digitalWrite(pin_motor_left_1, LOW);
+  digitalWrite(pin_motor_left_2, LOW);
+}
+
+class LedRGB{
+  private:
+  int pin_r, pin_g, pin_b;
+  public:
+  LedRGB(int _pin_r, int _pin_g, int _pin_b);
+  void setR();
+  void setG();
+  void setB();
+  void Off();
+};
+
+LedRGB::LedRGB(int _pin_r, int _pin_g, int _pin_b){
+  pin_r = _pin_r;
+  pin_g = _pin_g;
+  pin_b = _pin_b;
+  pinMode(pin_r, OUTPUT);
+  pinMode(pin_g, OUTPUT);
+  pinMode(pin_b, OUTPUT);
+}
+
+void LedRGB::setR(){
+  digitalWrite(pin_r, HIGH);
+  digitalWrite(pin_g, LOW);
+  digitalWrite(pin_b, LOW);
+}
+
+void LedRGB::setG(){
+  digitalWrite(pin_r, LOW);
+  digitalWrite(pin_g, HIGH);
+  digitalWrite(pin_b, LOW);
+}
+
+void LedRGB::setB(){
+  digitalWrite(pin_r, LOW);
+  digitalWrite(pin_g, LOW);
+  digitalWrite(pin_b, HIGH);
+}
+
+void LedRGB::Off(){
+  digitalWrite(pin_r, LOW);
+  digitalWrite(pin_g, LOW);
+  digitalWrite(pin_b, LOW);
+}
+
+//----------------------------------------------------Definindos Conexoes Ponte H<->Motor----------------------------------------------------
+#define pin_motor_left_1 4 // AIN 1
+#define pin_motor_left_2 5 // AIN 2
+
+#define pin_motor_right_1 7 // BIN 1
+#define pin_motor_right_2 8 // BIN 2
 
 
-long Microsegundos = 0;// Variável para armazenar o valor do tempo da reflexão do som refletido pelo objeto fornecido pela biblioteca do sensor
-float DistanciaemCM = 0;// Variável para armazenar o valor da distância a ser convertido por uma função da própria bilbioteca do sensor
-long DistanciaemCM_Filtrado = 0;// Variável para armazenar o valor da distância a ser convertido por uma função de filtragem (Media Móvel)
+#define pin_speed_motor_left 6 // PWMA
+#define pin_speed_motor_right 9  // PWMB
+#define STBY 2 //
 
-#define MotorLadoEsquerdo1 4 // AIN 1
-#define MotorLadoEsquerdo2 5 // AIN 2
+#define defaultPWM 60
+// ----------------------------------------------------Definindos Conexoes do HCSR04----------------------------------------------------
+int distancia; //VARIÁVEL DO TIPO INTEIRO
+String result; //VARIÁVEL DO TIPO STRING
 
-#define MotorLadoDireito1 7 // BIN 1
-#define MotorLadoDireito2 8 // BIN 2
+int trigPin = 3;
+int echoPin = 10;
+Ultrasonic ultrasonic(trigPin,echoPin);
+//----------------------------------------------------Instanciando Objetos----------------------------------------------------
+PonteH set_linkage = {pin_motor_left_1, pin_motor_left_2, pin_motor_right_1, pin_motor_right_2,
+                  STBY, pin_speed_motor_left, pin_speed_motor_right}; // Ponte H pinagens
 
+ControlMotor linkage(set_linkage); // Ponte H motor
 
-#define VelocidadeMotorLadoEsquerdo 6 // PWMA
-#define VelocidadeMotorLadoDireito 9  // PWMB
-#define STBY 2 // 
+Ultrasonic ultrasonicsensor(3, 10); // Ultrassonico
 
-#define N 10 // Constante Auxiliar
+PID pid(3, 2, 2);
 
-#define distancia 20 // distancia para parar
+MPU6050 mpu(Wire);
 
-#define verde 11
-#define azul 12
-#define vermelho 13
-
-long values[N]; // Vetor para armazenar os valores do sensor
-
-
-//============================================================ Escolhe a velocidade dos motores ==================================================================//
-int ValorVelocidadeMotorLadoEsquerdo = 55; // Ajustar a velocidade do motor do lado esquerdo
-int ValorVelocidadeMotorLadoDireito = 52; // Ajustar a velocidade do motor do lado direito
-
-// ============================================= Prototipo de funções do motor =================================================================================================//
+LedRGB leds(13, 11, 12);
 
 
-void BreakMotor(); // Para o motor
+// ----------------------------------------------------Variaveis Globais----------------------------------------------------
+int distance; // Variavel para armazenar a distancia
+unsigned long timer = 0; // Variavel para armazenar o tempo
+float angles[3]; // Variavel para armazenar os angulos
+float auxForward, auxRight, auxLeft; // Variavel para armazenar o angulo
+// ----------------------------------------------------Protótipo de funções----------------------------------------------------
 
-void TurnLeft();  // Gira para a esquerda
+int hcsr04_distance(); // Função para leitura do HCSR04
+void new_way(); // Função para o novo caminho
+void get_angle(); // Função para leitura do yaw
+float pid2pwm(float pid, int max); // Função para transformar a saída do controlador de graus para pwm
 
-void TurnRight(); // Gira para a direita
-
-void TurnBack(); // Gira para trás
-
-void Forward(); // Anda para frente
-
-void NewWay(); // Nova rota
-
-void Yellow(); // Led Acende na cor amarelo
-
-void Green(); // Led Acende na cor verde
-
-void Red(); // Led acende na cor vermelho
-
-long moving_average(long p_In); // Media movel
-
+// ----------------------------------------------------Função principal----------------------------------------------------
 
 void setup() {
-
-  //============================================================== Definições de entrada e saída ===================================================================//
-
-  pinMode(MotorLadoEsquerdo1, OUTPUT);
-  pinMode(MotorLadoEsquerdo2, OUTPUT);
-  pinMode(MotorLadoDireito1, OUTPUT);
-  pinMode(MotorLadoDireito2, OUTPUT);
-  pinMode(vermelho, OUTPUT);
-  pinMode(verde, OUTPUT);
-  pinMode(azul, OUTPUT);
-
-  Serial.begin(9600);// Inicia a comunicação seria com velocidade de 9600 bits por segundo
-
-  delay(3000);// Tempo de espera para inicialização (para dar tempo de por o robô no chão)
+  
+  Serial.begin(9600);
+  Wire.begin();
+  byte status = mpu.begin(1, 0);
+  while(status != 0){ }
+  mpu.calcOffsets(true, true);
+  mpu.setFilterGyroCoef(0.98);
+  linkage.Off();
+  linkage.setPWM(defaultPWM, defaultPWM);
+  delay(3000); // Delay para por o robo em posição
+  get_angle();
+  auxForward = angles[2];
 }
 
 void loop() {
-  delay(20); // Tempo de espera para a leitura do sensor
-
-  //Convertendo a distância em CM e lendo o sensor
-  DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
-  DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-
-  //Serial.print(DistanciaemCM);
-  //Serial.println(" ");
-  Serial.print(DistanciaemCM_Filtrado);
-  Serial.println(" ");
-
-
-  if (DistanciaemCM_Filtrado <= distancia) {// Se a distância lida pelo sensor for menor ou igual que 40 centimetros
-    //Velocidade motor lado esquerdo
-    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
-
-    //Velocidade motor lado direito
-    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
-
-    Red();
-    NewWay();
-
+  get_angle();
+  if((abs(angles[0]) > 30) || (abs(angles[1]) > 30)){
+    linkage.Off();
+    linkage.setPWM(0, 0);
+    leds.Off();
+    while ((abs(angles[0]) > 30) || (abs(angles[1]) > 30)) {get_angle(); Serial.println("Aguardando estar no chão."); delay(20);}
+    get_angle();
+    auxForward = angles[2];
   }
+  else{
+    float out = pid.calculate(angles[2], auxForward); // Calcula o PID
+      if(out < 0) {out = pid2pwm(out, 10); linkage.setPWM(defaultPWM + out, defaultPWM - out);} // Se o PID for negativo, o motor gira mais para a esquerda
+      else        {out = pid2pwm(out, 10); linkage.setPWM(defaultPWM - out, defaultPWM + out);} // Se o PID for positivo, o motor gira mais para a direita
+    
+    distance = hcsr04_distance();
+    if(distance <= 20){
+      leds.setR();
+      linkage.Off();
+      delay(1000);
+      new_way();
+      get_angle();
+      auxForward = angles[2];
+      auxRight = angles[2];
+    }
 
+    else{
+      linkage.goForward();
+      if (distance > 40) leds.setG();
+      else leds.setB();
+    }
 
-  else {// Se não, ou seja, se a distância for maior que 40 centimetros
-
-    //Velocidade motor lado esquerdo
-    analogWrite( VelocidadeMotorLadoEsquerdo, ValorVelocidadeMotorLadoEsquerdo);
-
-    //Velocidade motor lado direito
-    analogWrite( VelocidadeMotorLadoDireito, ValorVelocidadeMotorLadoDireito);
-
-    Forward();
-    if(DistanciaemCM_Filtrado > 40) Green();
-    else Blue();
+    delay(65); // Delay para não sobrecarregar o HCSR04
+  
   }
-
-}
-
-// ============================================= Funções  =================================================================================================//
-
-
-void BreakMotor(){ // Essa função faz o motor parar de girar
-
-    //
-    digitalWrite(STBY, LOW);
-    // Motor lado esquerdo desligado
-    digitalWrite(MotorLadoEsquerdo1, LOW);
-    digitalWrite(MotorLadoEsquerdo2, LOW);
-
-    // Motor lado direito desligado
-    digitalWrite(MotorLadoDireito1, LOW);
-    digitalWrite(MotorLadoDireito2, LOW);
 }
 
 
-void TurnRight(){ // O cubeto gira à direita
-
-    digitalWrite(STBY, HIGH);
-
-    // Motor lado esquerdo para frente
-    digitalWrite(MotorLadoEsquerdo1, LOW);
-    digitalWrite(MotorLadoEsquerdo2, HIGH);
-
-
-    // Motor lado direito para trás
-    digitalWrite(MotorLadoDireito1, HIGH);
-    digitalWrite(MotorLadoDireito2, LOW);
-
+// ----------------------------------------------------Implementação das funções----------------------------------------------------
+int hcsr04_distance(){ // Função para leitura do HCSR04
+  return ultrasonic.convert(ultrasonic.timing(), Ultrasonic::CM);
 }
-
-void TurnLeft(){ // O Cubeto gira à esquerda
-
-  digitalWrite(STBY, HIGH);
-  // Motor lado direito para frente
-  digitalWrite(MotorLadoDireito1, LOW);
-  digitalWrite(MotorLadoDireito2, HIGH);
-
-  // Motor lado esquerdo trás
-  digitalWrite(MotorLadoEsquerdo1, HIGH);
-  digitalWrite(MotorLadoEsquerdo2, LOW); 
-
-}
-
-void TurnBack(){ // O Cubeto anda para trás
-
-  digitalWrite(STBY, HIGH);
-
-  // Motor lado direito para trás
-    digitalWrite(MotorLadoDireito1, HIGH);
-    digitalWrite(MotorLadoDireito2, LOW);
-
-  // Motor lado esquerdo trás
-    digitalWrite(MotorLadoEsquerdo1, HIGH);
-    digitalWrite(MotorLadoEsquerdo2, LOW); 
-
-}
-
-void Forward(){ // O Cubeto anda para frente
-
-  digitalWrite(STBY, HIGH);
-
-  // Motor lado direito para frente
-    digitalWrite(MotorLadoDireito1, LOW);
-    digitalWrite(MotorLadoDireito2, HIGH);
-
-  // Motor lado esquerdo para frente
-    digitalWrite(MotorLadoEsquerdo1, LOW);
-    digitalWrite(MotorLadoEsquerdo2, HIGH);
-
-}
-
-void NewWay(){ // Determinar uma nova rota
-  DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
-  DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-  while (DistanciaemCM_Filtrado < distancia)
+void new_way(){ // Função para o novo caminho
+  int aux = 1;
+  do
   {
-    BreakMotor();
-    delay(500);
-    //TurnBack();
-    //delay(700);
-    //BreakMotor();
-    //delay(500);  
-    TurnRight();
-    delay(400);
-    BreakMotor();
-    delay(500);
-    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
-    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
-    if (DistanciaemCM_Filtrado < distancia){
-      TurnLeft();
-      delay(800);
-      BreakMotor();
-      delay(500);
-    } 
-    else break;
-    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
-    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
+      switch (aux)
+      {
+      case 1:
+        while (auxRight - 90 - angles[2] < 0){
+          linkage.TurnRight();
+          get_angle();
+          delay(10);
+        }
+        linkage.Off();
+        delay(500);
+        get_angle();
+        auxLeft = angles[2];
+        distance = hcsr04_distance();
+        break;
 
-    if (DistanciaemCM_Filtrado < distancia) {
-      TurnLeft();
-      delay(300);
-      BreakMotor();
-      delay(500);
+      case 2:
+        while (auxLeft + 180 - angles[2] > 0){
+          linkage.TurnLeft();
+          get_angle();
+          delay(10);
+        }
+        linkage.Off();
+        delay(500);
+        get_angle();
+        auxLeft = angles[2];
+        distance = hcsr04_distance();
+        break;
+
+      case 3:
+        while (auxLeft + 90 - angles[2] > 0){
+            linkage.TurnLeft();
+            get_angle();
+            delay(10);
+          }
+        linkage.Off();
+        delay(500);
+        get_angle();
+        auxRight = angles[2];
+        distance = hcsr04_distance();
+        break;
+      
       }
-    else break;
-    DistanciaemCM = SensorUltrassonico1.convert(SensorUltrassonico1.timing(), Ultrasonic::CM);
-    DistanciaemCM_Filtrado = moving_average(DistanciaemCM);
+      aux += 1;
+      if(aux>3) aux = 0;
+  } while (distance <= 20);
+  
+}
+
+void get_angle(){ // Função para leitura do roll, pitch e yaw
+  mpu.update();
+  if((millis() - timer) > 10){
+    angles[0] = mpu.getAngleX();
+    angles[1] = mpu.getAngleY();
+    angles[2] = mpu.getAngleZ();
+    timer = millis();
+  }
+}
+
+float pid2pwm(float pid, int max){ // Função para transformar a saída do controlador de graus para pwm
+  if(pid < 0){
+    pid = map(pid, 0, -360, 0, 200);
+    if(pid >= max) pid = max;
+  }
+  else
+  {
+    pid = map(pid, 0, 360, 0, 200);
+    if(pid >= max) pid = max;
   }
 
-}
-
-long moving_average(long p_In) // Media movel de 10 periodos
-{
-  int i;
-  long adder = 0; // acumulador para somar os pontos da media movel
-  // desloca os elementos do vetor media movel 
-  for(i = N; i>0; i--) values[i] = values[i-1];
-  
-  values[0] = p_In; // posicao inicial do vetor recebe a leitra p_In
-
-  for(i = 0; i<N; i++) adder += values[i]; // soma os elementos do vetor
-  
-  return adder/N; // retorna a media
-}
-
-
-void Blue()
-{
-digitalWrite(vermelho, LOW);
-digitalWrite(verde, LOW);
-digitalWrite(azul, HIGH);
-}
-
-void Green()
-{
-digitalWrite(vermelho, LOW);
-digitalWrite(verde, HIGH);
-digitalWrite(azul, LOW);
-}
-
-void Red()
-{
-digitalWrite(vermelho, HIGH);
-digitalWrite(verde, LOW);
-digitalWrite(azul, LOW);
+  return pid;
 }
