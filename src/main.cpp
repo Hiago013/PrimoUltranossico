@@ -70,14 +70,14 @@ void setup() {
 }
 
 void loop() {
-  get_angle();
-  if((abs(angles[0]) > 30) || (abs(angles[1]) > 30)){
-    linkage.Off();
+  get_angle(); // Leitura do angulo yaw, pitch e roll
+  if((abs(angles[0]) > 30) || (abs(angles[1]) > 30)){ // Se o angulo pitch ou roll for maior que 30 graus, o robo fica parado
+    linkage.Off();                                    // pois é considerado que ele caiu
     linkage.setPWM(0, 0);
     leds.Off();
     while ((abs(angles[0]) > 30) || (abs(angles[1]) > 30)) {get_angle(); Serial.println("Aguardando estar no chão."); delay(20);}
-    get_angle();
-    auxForward = angles[2];
+    get_angle();                                      // Leitura do angulo yaw, pitch e roll
+    auxForward = angles[2];                           // Armazenando o angulo forward
   }
   
   else{
@@ -85,8 +85,8 @@ void loop() {
       if(out < 0) {out = pid2pwm(out, 10); linkage.setPWM(defaultPWM + out, defaultPWM - out);} // Se o PID for negativo, o motor gira mais para a esquerda
       else        {out = pid2pwm(out, 10); linkage.setPWM(defaultPWM - out, defaultPWM + out);} // Se o PID for positivo, o motor gira mais para a direita
     
-    distance = hcsr04_distance();
-    if(distance <= 20){
+    distance = hcsr04_distance(); // Leitura da distancia
+    if(distance <= 20){ // Se a distancia for menor que 20 cm, o robo fica parado e acende o LED vermelho
       leds.setR();
       linkage.Off();
       delay(1000);
@@ -96,10 +96,10 @@ void loop() {
       auxRight = angles[2];
     }
 
-    else{
+    else{ // Se a distancia for maior que 20 cm, o robo continua a correr
       linkage.goForward();
-      if (distance > 40) leds.setG();
-      else leds.setB();
+      if (distance > 40) leds.setG(); // Se a distancia for maior que 40 cm, o LED verde é acendido
+      else leds.setB(); // Se a distancia for menor que 40 cm, o LED azul é acendido
     }
 
     delay(65); // Delay para não sobrecarregar o HCSR04
