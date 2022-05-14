@@ -1,165 +1,9 @@
 #include <Arduino.h>
 #include "UltraSonic.h"
 #include "MPU6050_light.h"
-
-struct PonteH
-{
-int pin_motor_left_1; 
-int pin_motor_left_2; 
-
-int pin_motor_right_1; 
-int pin_motor_right_2; 
-
-int STBY;
-
-int pin_speed_motor_left;
-int pin_speed_motor_right;
-};
-
-class PID{
-  private:
-  float kp, ki, kd;
-  float error, integral, derivative, last_error, setPoint;
-  float output;
-  public:
-  PID(float _kp, float _ki, float _kd);
-  float calculate(float input,float _setPoint);
-};
-
-PID::PID(float _kp, float _ki, float _kd){
-  kp = _kp;
-  ki = _ki;
-  kd = _kd;
-  error = 0;
-  integral = 0;
-  derivative = 0;
-  last_error = 0;
-  output = 0;
-}
-
-float PID::calculate(float input, float _setPoint){
-  setPoint = _setPoint;
-  error = setPoint - input;
-  integral += error;
-  derivative = error - last_error;
-  last_error = error;
-  output = kp * error + ki * integral + kd * derivative;
-  return output;
-}
-
-class ControlMotor{
-  private:
-  int pin_motor_left_1, pin_motor_right_1, pin_motor_left_2, pin_motor_right_2;
-  int pin_motor_left_pwm, pin_motor_right_pwm;
-  int pin_STBY;
-
-  public:
-  ControlMotor(PonteH _pins); //constructor
-  void setPWM(int _pwm_left, int _pwm_right);
-  void goForward();
-  void TurnLeft();
-  void TurnRight();
-  void Off();
-
-};
-
-ControlMotor::ControlMotor(PonteH _pins){
-  pin_motor_left_1 = _pins.pin_motor_left_1;
-  pin_motor_right_1 = _pins.pin_motor_right_1;
-  pin_motor_left_2 = _pins.pin_motor_left_2;
-  pin_motor_right_2 = _pins.pin_motor_right_2;
-  pin_motor_left_pwm = _pins.pin_speed_motor_left;
-  pin_motor_right_pwm = _pins.pin_speed_motor_right;
-  pin_STBY = _pins.STBY;
-  pinMode(pin_motor_left_1, OUTPUT);
-  pinMode(pin_motor_left_2, OUTPUT);
-  pinMode(pin_motor_right_1, OUTPUT);
-  pinMode(pin_motor_right_2, OUTPUT);
-  pinMode(_pins.STBY, OUTPUT);
-  pinMode(pin_motor_left_pwm, OUTPUT);
-  pinMode(pin_motor_right_pwm, OUTPUT);
-}
-
-void ControlMotor::setPWM(int _pwm_left, int _pwm_right){
-  analogWrite(pin_motor_left_pwm, _pwm_left);
-  analogWrite(pin_motor_right_pwm, _pwm_right);
-}
-
-void ControlMotor::goForward(){
-  digitalWrite(pin_STBY, HIGH);
-  digitalWrite(pin_motor_right_1, LOW);
-  digitalWrite(pin_motor_right_2, HIGH);
-  digitalWrite(pin_motor_left_1, LOW);
-  digitalWrite(pin_motor_left_2, HIGH);
-}
-
-void ControlMotor::TurnLeft(){
-  digitalWrite(pin_STBY, HIGH);
-  digitalWrite(pin_motor_right_1, LOW);
-  digitalWrite(pin_motor_right_2, HIGH);
-  digitalWrite(pin_motor_left_1, HIGH);
-  digitalWrite(pin_motor_left_2, LOW);
-}
-
-void ControlMotor::TurnRight(){
-  digitalWrite(pin_STBY, HIGH);
-  digitalWrite(pin_motor_right_1, HIGH);
-  digitalWrite(pin_motor_right_2, LOW);
-  digitalWrite(pin_motor_left_1, LOW);
-  digitalWrite(pin_motor_left_2, HIGH);
-}
-
-void ControlMotor::Off(){
-  digitalWrite(pin_STBY, LOW);
-  digitalWrite(pin_motor_right_1, LOW);
-  digitalWrite(pin_motor_right_2, LOW);
-  digitalWrite(pin_motor_left_1, LOW);
-  digitalWrite(pin_motor_left_2, LOW);
-}
-
-class LedRGB{
-  private:
-  int pin_r, pin_g, pin_b;
-  public:
-  LedRGB(int _pin_r, int _pin_g, int _pin_b);
-  void setR();
-  void setG();
-  void setB();
-  void Off();
-};
-
-LedRGB::LedRGB(int _pin_r, int _pin_g, int _pin_b){
-  pin_r = _pin_r;
-  pin_g = _pin_g;
-  pin_b = _pin_b;
-  pinMode(pin_r, OUTPUT);
-  pinMode(pin_g, OUTPUT);
-  pinMode(pin_b, OUTPUT);
-}
-
-void LedRGB::setR(){
-  digitalWrite(pin_r, HIGH);
-  digitalWrite(pin_g, LOW);
-  digitalWrite(pin_b, LOW);
-}
-
-void LedRGB::setG(){
-  digitalWrite(pin_r, LOW);
-  digitalWrite(pin_g, HIGH);
-  digitalWrite(pin_b, LOW);
-}
-
-void LedRGB::setB(){
-  digitalWrite(pin_r, LOW);
-  digitalWrite(pin_g, LOW);
-  digitalWrite(pin_b, HIGH);
-}
-
-void LedRGB::Off(){
-  digitalWrite(pin_r, LOW);
-  digitalWrite(pin_g, LOW);
-  digitalWrite(pin_b, LOW);
-}
+#include "PID.h"
+#include "ControlMotor.h"
+#include "LEDRGB.h"
 
 //----------------------------------------------------Definindos Conexoes Ponte H<->Motor----------------------------------------------------
 #define pin_motor_left_1 4 // AIN 1
@@ -168,32 +12,31 @@ void LedRGB::Off(){
 #define pin_motor_right_1 7 // BIN 1
 #define pin_motor_right_2 8 // BIN 2
 
-
 #define pin_speed_motor_left 6 // PWMA
 #define pin_speed_motor_right 9  // PWMB
-#define STBY 2 //
+#define STBY 2 // STBY
 
-#define defaultPWM 60
+#define defaultPWM 60 // PWM default
 // ----------------------------------------------------Definindos Conexoes do HCSR04----------------------------------------------------
-int distancia; //VARIÁVEL DO TIPO INTEIRO
-String result; //VARIÁVEL DO TIPO STRING
 
-int trigPin = 3;
-int echoPin = 10;
-Ultrasonic ultrasonic(trigPin,echoPin);
-//----------------------------------------------------Instanciando Objetos----------------------------------------------------
+int trigPin = 3; // Trigger
+int echoPin = 10; // Echo
+Ultrasonic ultrasonic(trigPin,echoPin); // Instanciando objeto ultrasonic
+
+//----------------------------------------------------Definindo Conexoes com a Ponte H----------------------------------------------------
+
+
 PonteH set_linkage = {pin_motor_left_1, pin_motor_left_2, pin_motor_right_1, pin_motor_right_2,
                   STBY, pin_speed_motor_left, pin_speed_motor_right}; // Ponte H pinagens
 
 ControlMotor linkage(set_linkage); // Ponte H motor
 
-Ultrasonic ultrasonicsensor(3, 10); // Ultrassonico
+//---------------------------------------------------Instanciando objetos ----------------------------------------------------
+PID pid(3, 2, 2); // PID(Kp, Ki, Kd)
 
-PID pid(3, 2, 2);
+MPU6050 mpu(Wire); // MPU6050 sensor
 
-MPU6050 mpu(Wire);
-
-LedRGB leds(13, 11, 12);
+LedRGB leds(13, 11, 12); // LED RGB -> red - 13, green - 11, blue - 12
 
 
 // ----------------------------------------------------Variaveis Globais----------------------------------------------------
@@ -207,11 +50,12 @@ int hcsr04_distance(); // Função para leitura do HCSR04
 void new_way(); // Função para o novo caminho
 void get_angle(); // Função para leitura do yaw
 float pid2pwm(float pid, int max); // Função para transformar a saída do controlador de graus para pwm
+void improved_pid(); // Função para o controlador de graus
+
 
 // ----------------------------------------------------Função principal----------------------------------------------------
 
 void setup() {
-  
   Serial.begin(9600);
   Wire.begin();
   byte status = mpu.begin(1, 0);
@@ -235,6 +79,7 @@ void loop() {
     get_angle();
     auxForward = angles[2];
   }
+  
   else{
     float out = pid.calculate(angles[2], auxForward); // Calcula o PID
       if(out < 0) {out = pid2pwm(out, 10); linkage.setPWM(defaultPWM + out, defaultPWM - out);} // Se o PID for negativo, o motor gira mais para a esquerda
@@ -273,7 +118,7 @@ void new_way(){ // Função para o novo caminho
   {
       switch (aux)
       {
-      case 1:
+      case 1: // Primeiro caso tenta girar 90 graus sentido horario
         while (auxRight - 90 - angles[2] < 0){
           linkage.TurnRight();
           get_angle();
@@ -286,7 +131,7 @@ void new_way(){ // Função para o novo caminho
         distance = hcsr04_distance();
         break;
 
-      case 2:
+      case 2: // Segundo caso tentar girar 180 graus sentido anti-horario
         while (auxLeft + 180 - angles[2] > 0){
           linkage.TurnLeft();
           get_angle();
@@ -299,7 +144,7 @@ void new_way(){ // Função para o novo caminho
         distance = hcsr04_distance();
         break;
 
-      case 3:
+      case 3: // Terceiro caso tentar girar 90 graus sentido anti-horario
         while (auxLeft + 90 - angles[2] > 0){
             linkage.TurnLeft();
             get_angle();
@@ -327,6 +172,7 @@ void get_angle(){ // Função para leitura do roll, pitch e yaw
     angles[2] = mpu.getAngleZ();
     timer = millis();
   }
+  improved_pid();
 }
 
 float pid2pwm(float pid, int max){ // Função para transformar a saída do controlador de graus para pwm
@@ -341,4 +187,28 @@ float pid2pwm(float pid, int max){ // Função para transformar a saída do cont
   }
 
   return pid;
+}
+
+void improved_pid(){ // Função para o controlador de graus
+  for(int i = 0; i < 3; i++){
+    if(angles[i] >= 0){ // caso o angulo seja positivo
+      if((fmod(angles[i],360) <= 180)){
+        angles[i] = fmod(angles[i], 360);
+      }
+      else{
+        angles[i] = fmod(angles[i], 360) - 360;
+      }
+    }
+
+    else{ // caso o angulo seja negativo
+      if((fmod(-angles[i],360) <= 180)){
+        angles[i] = -fmod(-angles[i], 360);
+      }
+      else{
+        angles[i] = -fmod(-angles[i], 360) - 360;
+      }
+
+    }
+    
+  }
 }
