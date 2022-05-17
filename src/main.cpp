@@ -50,7 +50,6 @@ int hcsr04_distance(); // Função para leitura do HCSR04
 void new_way(); // Função para o novo caminho
 void get_angle(); // Função para leitura do yaw
 float pid2pwm(float pid, int max); // Função para transformar a saída do controlador de graus para pwm
-void improved_pid(); // Função para o controlador de graus
 
 
 // ----------------------------------------------------Função principal----------------------------------------------------
@@ -102,7 +101,8 @@ void loop() {
       else leds.setB(); // Se a distancia for menor que 40 cm, o LED azul é acendido
     }
 
-    delay(65); // Delay para não sobrecarregar o HCSR04
+    unsigned long currentTime = millis(); // Armazena o tempo atual
+    while((millis() - currentTime) < 50){ }// Espera 50 milisegundos
   
   }
 }
@@ -172,7 +172,6 @@ void get_angle(){ // Função para leitura do roll, pitch e yaw
     angles[2] = mpu.getAngleZ();
     timer = millis();
   }
-  improved_pid();
 }
 
 float pid2pwm(float pid, int max){ // Função para transformar a saída do controlador de graus para pwm
@@ -187,28 +186,4 @@ float pid2pwm(float pid, int max){ // Função para transformar a saída do cont
   }
 
   return pid;
-}
-
-void improved_pid(){ // Função para o controlador de graus
-  for(int i = 0; i < 3; i++){
-    if(angles[i] >= 0){ // caso o angulo seja positivo
-      if((fmod(angles[i],360) <= 180)){
-        angles[i] = fmod(angles[i], 360);
-      }
-      else{
-        angles[i] = fmod(angles[i], 360) - 360;
-      }
-    }
-
-    else{ // caso o angulo seja negativo
-      if((fmod(-angles[i],360) <= 180)){
-        angles[i] = -fmod(-angles[i], 360);
-      }
-      else{
-        angles[i] = -fmod(-angles[i], 360) - 360;
-      }
-
-    }
-    
-  }
 }
