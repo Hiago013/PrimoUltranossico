@@ -1,3 +1,6 @@
+// D10 LOW D11 HIGH -> Obstaculo inputpullup
+// D10 HIGH D11 LOW -> Botoes inputpullUp
+
 #include <Arduino.h>
 #include "UltraSonic.h"
 #include "MPU6050_light.h"
@@ -19,8 +22,8 @@
 #define defaultPWM 60 // PWM default
 // ----------------------------------------------------Definindos Conexoes do HCSR04----------------------------------------------------
 
-int trigPin = 3; // Trigger
-int echoPin = 10; // Echo
+int trigPin = 12; // Trigger
+int echoPin = 13; // Echo
 Ultrasonic ultrasonic(trigPin,echoPin); // Instanciando objeto ultrasonic
 
 //----------------------------------------------------Definindo Conexoes com a Ponte H----------------------------------------------------
@@ -36,7 +39,7 @@ PID pid(3, 2, 2); // PID(Kp, Ki, Kd)
 
 MPU6050 mpu(Wire); // MPU6050 sensor
 
-LedRGB leds(13, 11, 12); // LED RGB -> red - 13, green - 11, blue - 12
+LedRGB leds(10, 0, 1); // LED RGB -> red - 13, green - 11, blue - 12
 
 
 // ----------------------------------------------------Variaveis Globais----------------------------------------------------
@@ -55,7 +58,7 @@ float pid2pwm(float pid, int max); // Função para transformar a saída do cont
 // ----------------------------------------------------Função principal----------------------------------------------------
 
 void setup() {
-  Serial.begin(9600);
+  //Serial.begin(9600);
   Wire.begin();
   byte status = mpu.begin(1, 0);
   while(status != 0){ }
