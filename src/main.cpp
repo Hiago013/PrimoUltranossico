@@ -9,8 +9,8 @@
 #include "LEDRGB.h"
 
 //----------------------------------------------------Definindos Conexoes Ponte H<->Motor----------------------------------------------------
-#define pin_motor_left_1 4 // AIN 1
-#define pin_motor_left_2 5 // AIN 2
+#define pin_motor_left_1 5 // AIN 1
+#define pin_motor_left_2 4 // AIN 2
 
 #define pin_motor_right_1 7 // BIN 1
 #define pin_motor_right_2 8 // BIN 2
@@ -19,7 +19,7 @@
 #define pin_speed_motor_right 9  // PWMB
 #define STBY 2 // STBY
 
-#define defaultPWM 60 // PWM default
+#define defaultPWM 100 // PWM default
 // ----------------------------------------------------Definindos Conexoes do HCSR04----------------------------------------------------
 
 int trigPin = 12; // Trigger
